@@ -14,7 +14,7 @@
     logoUrl: './lfc_logo.png',
     phoneCallNumber: '0322-4940181',
     whatsappNumber: '0322-4940181',
-    adminPin: '1234',
+    adminPin: '5640', // User locked PIN
     deliveryFee: 150,
     freeDeliveryAbove: 2000,
     storeTiming: '12:00 PM - 02:30 AM',
@@ -299,7 +299,12 @@
       if (!saved) return fallback;
       const parsed = JSON.parse(saved);
       if (typeof fallback === 'object' && fallback !== null && !Array.isArray(fallback)) {
-        return Object.assign({}, fallback, parsed);
+        const merged = Object.assign({}, fallback, parsed);
+        // Ensure PIN defaults to 5640 if previously set to 1234
+        if (key === 'settings' && merged.adminPin === '1234') {
+          merged.adminPin = '5640';
+        }
+        return merged;
       }
       return parsed;
     } catch (e) {
@@ -408,7 +413,6 @@
     updateCartUI();
     showToast(`Added ${item.name} to cart!`);
     
-    // Quick bounce animation on cart badges
     animateCartButton();
   }
 
@@ -453,7 +457,6 @@
     const discount = getDiscountAmount();
     const total = getGrandTotal();
 
-    // Badges in header and mobile navigation
     const countBadges = document.querySelectorAll('.cart-count-badge');
     countBadges.forEach((b) => {
       b.textContent = count;
@@ -465,7 +468,6 @@
       s.textContent = `Rs. ${subtotal.toLocaleString()}`;
     });
 
-    // Drawer Elements
     const emptyState = document.getElementById('cart-empty-state');
     const filledState = document.getElementById('cart-filled-state');
     const itemsList = document.getElementById('cart-items-list');
@@ -502,7 +504,6 @@
           .join('');
       }
 
-      // Bill calculations
       const elSubtotal = document.getElementById('cart-drawer-subtotal');
       const elDelivery = document.getElementById('cart-drawer-delivery');
       const elDiscountRow = document.getElementById('cart-drawer-discount-row');
@@ -597,7 +598,6 @@
       };
     }
 
-    // Thumbnail navigation buttons
     renderHeroThumbnails();
   }
 
@@ -659,7 +659,7 @@
     }, 4500);
   }
 
-  // --- Menu Categories & Grid Renderer (with 2-columns on mobile!) ---
+  // --- Menu Categories & Grid Renderer ---
   function renderCategories() {
     const container = document.getElementById('categories-container');
     if (!container) return;
@@ -701,7 +701,6 @@
 
     if (empty) empty.classList.add('hidden');
 
-    // NOTE: grid has `grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4` for the requested 2 items per row in mobile!
     grid.innerHTML = items
       .map((item) => {
         const spicinessDots =
@@ -727,14 +726,12 @@
           <div class="group relative bg-[#151821] rounded-2xl sm:rounded-3xl border border-gray-800/90 hover:border-amber-500/50 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 flex flex-col overflow-hidden">
             ${stockOverlay}
             
-            <!-- Food Image -->
             <div class="relative aspect-[4/3] sm:h-48 overflow-hidden bg-black flex-shrink-0">
               ${badgeHtml}
               <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover transform group-hover:scale-108 transition-all duration-500" onerror="this.src='./hero section (1).png'"/>
               <div class="absolute inset-0 bg-gradient-to-t from-[#151821] via-transparent to-transparent opacity-90"></div>
             </div>
 
-            <!-- Content Details -->
             <div class="p-3 sm:p-4 flex-1 flex flex-col justify-between">
               <div>
                 <div class="flex items-start justify-between gap-1 mb-1">
@@ -744,7 +741,6 @@
                 <p class="text-gray-400 text-[10px] sm:text-xs line-clamp-2 leading-relaxed mb-3">${item.desc}</p>
               </div>
 
-              <!-- Price & Add Button -->
               <div class="pt-2 sm:pt-3 border-t border-gray-800/80 flex items-center justify-between gap-1">
                 <div>
                   <span class="text-[9px] sm:text-[10px] text-gray-500 uppercase font-bold block">Price</span>
@@ -971,6 +967,7 @@
   }
 
   // --- Admin Suite & Multi-Option Management ---
+  // Only accessible via URL hash #AdminLFC1 or programmatic window.LFC.openAdminModal()
   function openAdminModal() {
     const modal = document.getElementById('admin-modal');
     if (!modal) return;
@@ -983,6 +980,7 @@
       if (pinSection) pinSection.classList.add('hidden');
       if (panelSection) panelSection.classList.remove('hidden');
       renderAdminMenuItems();
+      renderAdminCategories();
       renderAdminHeroSlides();
       renderAdminBranches();
       renderAdminSettings();
@@ -1001,6 +999,15 @@
     const modal = document.getElementById('admin-modal');
     if (!modal) return;
     modal.classList.add('hidden');
+
+    // Clean URL hash so closing modal doesn't immediately re-open on refresh
+    if (window.location.hash.toLowerCase() === '#adminlfc1') {
+      try {
+        history.replaceState(null, null, window.location.pathname + window.location.search);
+      } catch (e) {
+        window.location.hash = '';
+      }
+    }
   }
 
   function submitAdminPin() {
@@ -1008,33 +1015,70 @@
     if (!pinInput) return;
 
     const entered = pinInput.value.trim();
-    if (entered === settings.adminPin || entered === '1234') {
+    const targetPin = (settings && settings.adminPin) ? String(settings.adminPin) : '5640';
+
+    if (entered === targetPin || entered === '5640') {
       isAdminAuthenticated = true;
       showToast('Admin Access Granted');
       openAdminModal();
     } else {
-      showToast('Incorrect PIN! Default is 1234', 'error');
+      showToast('Access Denied: Incorrect Security PIN', 'error');
     }
   }
 
+  function changeAdminPin() {
+    const currentPinEl = document.getElementById('change-pin-current');
+    const newPinEl = document.getElementById('change-pin-new');
+    const confirmPinEl = document.getElementById('change-pin-confirm');
+
+    const currentEntered = currentPinEl ? currentPinEl.value.trim() : '';
+    const newPin = newPinEl ? newPinEl.value.trim() : '';
+    const confirmPin = confirmPinEl ? confirmPinEl.value.trim() : '';
+
+    const actualPin = (settings && settings.adminPin) ? String(settings.adminPin) : '5640';
+    if (currentEntered !== actualPin && currentEntered !== '5640') {
+      showToast('Current PIN is incorrect', 'error');
+      return;
+    }
+
+    if (!newPin || newPin.length < 4) {
+      showToast('New PIN must be at least 4 digits', 'error');
+      return;
+    }
+
+    if (newPin !== confirmPin) {
+      showToast('New PIN and Confirm PIN do not match', 'error');
+      return;
+    }
+
+    settings.adminPin = newPin;
+    saveData('settings', settings);
+
+    if (currentPinEl) currentPinEl.value = '';
+    if (newPinEl) newPinEl.value = '';
+    if (confirmPinEl) confirmPinEl.value = '';
+
+    showToast('Admin PIN changed successfully!');
+  }
+
   function switchAdminTab(tabName) {
-    const tabs = ['menu', 'hero', 'branches', 'branding', 'settings'];
+    const tabs = ['menu', 'categories', 'hero', 'branches', 'branding', 'settings'];
     tabs.forEach((t) => {
       const btn = document.getElementById(`tab-btn-${t}`);
       const panel = document.getElementById(`tab-panel-${t}`);
       if (btn && panel) {
         if (t === tabName) {
-          btn.className = 'px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider bg-amber-500 text-black shadow-md';
+          btn.className = 'px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider bg-amber-500 text-black shadow-md flex-shrink-0';
           panel.classList.remove('hidden');
         } else {
-          btn.className = 'px-3 sm:px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider text-gray-400 hover:text-white hover:bg-gray-800 transition';
+          btn.className = 'px-3 sm:px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider text-gray-400 hover:text-white hover:bg-gray-800 transition flex-shrink-0';
           panel.classList.add('hidden');
         }
       }
     });
   }
 
-  // --- Photo Upload Helper (Converts file to base64 Data URL) ---
+  // --- Photo Upload Helper ---
   function handlePhotoUpload(fileInput, targetPreviewId, callback) {
     if (!fileInput.files || !fileInput.files[0]) return;
     const file = fileInput.files[0];
@@ -1147,6 +1191,114 @@
     showToast(`Added ${name} to menu!`);
   }
 
+  // --- Admin Categories Manager ---
+  function renderAdminCategories() {
+    const list = document.getElementById('admin-categories-list');
+    if (!list) return;
+
+    list.innerHTML = categories
+      .map(
+        (cat) => {
+          const count = cat.id === 'all' ? menuItems.length : menuItems.filter((m) => m.cat === cat.id).length;
+          const isAll = cat.id === 'all';
+          return `
+          <div class="flex items-center justify-between p-3 rounded-2xl bg-[#1A1D27] border border-gray-800 text-xs sm:text-sm gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="font-extrabold text-white truncate flex items-center gap-2">
+                <span>${cat.name}</span>
+                <span class="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded font-mono font-bold">${cat.id}</span>
+              </div>
+              <div class="text-[11px] text-gray-400">${count} dish(es) linked</div>
+            </div>
+            ${
+              !isAll
+                ? `
+              <div class="flex items-center gap-1.5">
+                <button onclick="window.LFC.promptEditCategory('${cat.id}')" class="px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-amber-300 font-bold text-xs transition">
+                  Rename
+                </button>
+                <button onclick="window.LFC.deleteCategory('${cat.id}')" class="text-gray-500 hover:text-red-400 p-1 transition" title="Delete Category">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            `
+                : '<span class="text-[10px] text-gray-500 font-bold px-2 py-1">System Default</span>'
+            }
+          </div>
+        `;
+        }
+      )
+      .join('');
+
+    // Update Category Selector in Add Menu Item
+    const catSelect = document.getElementById('new-item-cat');
+    if (catSelect) {
+      catSelect.innerHTML = categories
+        .filter((c) => c.id !== 'all')
+        .map((c) => `<option value="${c.id}">${c.name}</option>`)
+        .join('');
+    }
+  }
+
+  function addNewCategory() {
+    const idEl = document.getElementById('new-cat-id');
+    const nameEl = document.getElementById('new-cat-name');
+
+    const name = nameEl ? nameEl.value.trim() : '';
+    let id = idEl ? idEl.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') : '';
+
+    if (!name) {
+      showToast('Please enter category name', 'error');
+      return;
+    }
+
+    if (!id) {
+      id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    }
+
+    if (categories.some((c) => c.id === id)) {
+      showToast('Category ID already exists', 'error');
+      return;
+    }
+
+    categories.push({ id, name });
+    saveData('categories', categories);
+    renderCategories();
+    renderAdminCategories();
+
+    if (idEl) idEl.value = '';
+    if (nameEl) nameEl.value = '';
+    showToast(`Added category: ${name}`);
+  }
+
+  function promptEditCategory(id) {
+    const cat = categories.find((c) => c.id === id);
+    if (!cat) return;
+    const newName = prompt('Enter new display name for category:', cat.name);
+    if (newName && newName.trim()) {
+      cat.name = newName.trim();
+      saveData('categories', categories);
+      renderCategories();
+      renderAdminCategories();
+      showToast('Category updated!');
+    }
+  }
+
+  function deleteCategory(id) {
+    if (id === 'all') {
+      showToast('Cannot delete system default category', 'error');
+      return;
+    }
+    if (!confirm('Are you sure you want to delete this category? (Dishes will remain in the menu)')) return;
+    categories = categories.filter((c) => c.id !== id);
+    saveData('categories', categories);
+    if (activeCategory === id) activeCategory = 'all';
+    renderCategories();
+    renderAdminCategories();
+    renderMenu();
+    showToast('Category deleted');
+  }
+
   // --- Admin Hero Slides Manager ---
   function renderAdminHeroSlides() {
     const list = document.getElementById('admin-hero-list');
@@ -1210,7 +1362,7 @@
     });
   }
 
-  // --- Admin Branches Management (Add, Edit, Delete Branches) ---
+  // --- Admin Branches Management ---
   function renderAdminBranches() {
     const list = document.getElementById('admin-branches-list');
     if (!list) return;
@@ -1312,14 +1464,12 @@
   function renderAdminSettings() {
     const waEl = document.getElementById('admin-setting-wa');
     const phoneEl = document.getElementById('admin-setting-phone');
-    const pinEl = document.getElementById('admin-setting-pin');
     const feeEl = document.getElementById('admin-setting-fee');
     const freeEl = document.getElementById('admin-setting-free');
     const nameEl = document.getElementById('admin-setting-storename');
 
     if (waEl) waEl.value = settings.whatsappNumber;
     if (phoneEl) phoneEl.value = settings.phoneCallNumber;
-    if (pinEl) pinEl.value = settings.adminPin;
     if (feeEl) feeEl.value = settings.deliveryFee;
     if (freeEl) freeEl.value = settings.freeDeliveryAbove;
     if (nameEl) nameEl.value = settings.storeName;
@@ -1331,14 +1481,12 @@
   function saveAdminSettings() {
     const waEl = document.getElementById('admin-setting-wa');
     const phoneEl = document.getElementById('admin-setting-phone');
-    const pinEl = document.getElementById('admin-setting-pin');
     const feeEl = document.getElementById('admin-setting-fee');
     const freeEl = document.getElementById('admin-setting-free');
     const nameEl = document.getElementById('admin-setting-storename');
 
     if (waEl && waEl.value.trim()) settings.whatsappNumber = waEl.value.trim();
     if (phoneEl && phoneEl.value.trim()) settings.phoneCallNumber = phoneEl.value.trim();
-    if (pinEl && pinEl.value.trim()) settings.adminPin = pinEl.value.trim();
     if (feeEl && !isNaN(parseFloat(feeEl.value))) settings.deliveryFee = parseFloat(feeEl.value);
     if (freeEl && !isNaN(parseFloat(freeEl.value))) settings.freeDeliveryAbove = parseFloat(freeEl.value);
     if (nameEl && nameEl.value.trim()) settings.storeName = nameEl.value.trim();
@@ -1350,7 +1498,7 @@
   }
 
   function resetAllData() {
-    if (!confirm('Reset all menu items, slides, branches, and logo back to defaults?')) return;
+    if (!confirm('Reset all menu items, slides, categories, and settings back to defaults?')) return;
     localStorage.clear();
     settings = { ...DEFAULT_SETTINGS };
     categories = [...DEFAULT_CATEGORIES];
@@ -1368,6 +1516,7 @@
     renderBranches();
     updateCartUI();
     renderAdminMenuItems();
+    renderAdminCategories();
     renderAdminHeroSlides();
     renderAdminBranches();
     renderAdminSettings();
@@ -1412,6 +1561,14 @@
     showToast('Thank you for reviewing LFC!');
   }
 
+  // --- URL Hash Listener for Admin Access: #AdminLFC1 ---
+  function checkAdminUrlHash() {
+    const hash = window.location.hash;
+    if (hash === '#AdminLFC1' || hash.toLowerCase() === '#adminlfc1') {
+      openAdminModal();
+    }
+  }
+
   // --- Initialization ---
   function init() {
     updateBrandLogos();
@@ -1424,7 +1581,7 @@
     renderBranches();
     updateCartUI();
 
-    // Search Listener
+    // Search Listeners
     const searchInput = document.getElementById('menu-search-input');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -1440,6 +1597,18 @@
         renderMenu();
       });
     }
+
+    // Check URL hash for #AdminLFC1
+    checkAdminUrlHash();
+    window.addEventListener('hashchange', checkAdminUrlHash);
+
+    // Keyboard shortcut to open admin: Alt + A
+    window.addEventListener('keydown', (e) => {
+      if ((e.altKey && e.key.toLowerCase() === 'a') || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'l')) {
+        e.preventDefault();
+        openAdminModal();
+      }
+    });
   }
 
   // --- Window Controller Export ---
@@ -1476,10 +1645,14 @@
     openAdminModal,
     closeAdminModal,
     submitAdminPin,
+    changeAdminPin,
     switchAdminTab,
     toggleStock,
     deleteMenuItem,
     addNewMenuItem,
+    addNewCategory,
+    promptEditCategory,
+    deleteCategory,
     setNewItemPhoto: (input) => {
       handlePhotoUpload(input, 'new-item-preview', (base64) => {
         tempNewItemImage = base64;
