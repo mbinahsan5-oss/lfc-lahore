@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #0A0A0D;
+    color: #F3F4F6;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #111217;
+}
+::-webkit-scrollbar-thumb {
+  background: #272730;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f59e0b;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes floatSmooth {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+.animate-float-slow {
+  animation: floatSmooth 5s ease-in-out infinite;
+}
+
+@keyframes chilliPopUp {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(calc(var(--tx, 0px) * 0.4), -18px) scale(1.2) rotate(var(--rot, 10deg));
+  }
+  60% {
+    opacity: 0.9;
+    transform: translate(var(--tx, 0px), -42px) scale(1.1) rotate(var(--rot, 25deg));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--tx, 0px) * 1.3), -70px) scale(0.4) rotate(calc(var(--rot, 30deg) * 1.5));
+  }
+}
+
+.animate-chilli-pop {
+  animation: chilliPopUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes bubbleFloat {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+  33% {
+    transform: translateY(-12px) translateX(6px) scale(1.04);
+  }
+  66% {
+    transform: translateY(8px) translateX(-5px) scale(0.96);
+  }
+}
+
+@keyframes bubbleShine {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(200%) rotate(45deg);
+  }
+}
+
+.animate-bubble-float {
+  animation: bubbleFloat 7s ease-in-out infinite;
+}
+
+.animate-bubble-float-delay {
+  animation: bubbleFloat 9s ease-in-out infinite;
+  animation-delay: -3.5s;
+}
+
+.bubble-glass {
+  background: radial-gradient(120% 120% at 20% 10%, rgba(255, 255, 255, 0.08) 0%, rgba(20, 21, 30, 0.85) 60%, rgba(10, 11, 16, 0.95) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.bubble-pill-glow {
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), 0 8px 24px -6px rgba(0, 0, 0, 0.6);
+}
+
+
+
